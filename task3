@@ -1,0 +1,55 @@
+import cv2
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+
+# Load the pre-trained traffic sign classification model (MobileNet in this case)
+model = keras.models.load_model('traffic_sign_model.h5')
+
+# Define a list of traffic sign labels
+class_names = ["Speed limit (20km/h)", "Speed limit (30km/h)", "Speed limit (50km/h)", "Speed limit (60km/h)", "Speed limit (70km/h)", "Speed limit (80km/h)", "End of speed limit (80km/h)", "Speed limit (100km/h)", "Speed limit (120km/h)", "No passing", "No passing for vehicles over 3.5 metric tons", "Right-of-way at the next intersection", "Priority road", "Yield", "Stop", "No vehicles", "Vehicles over 3.5 metric tons prohibited", "No entry", "General caution", "Dangerous curve to the left", "Dangerous curve to the right", "Double curve", "Bumpy road", "Slippery road", "Road narrows on the right", "Road work", "Traffic signals", "Pedestrians", "Children crossing", "Bicycles crossing", "Beware of ice/snow", "Wild animals crossing", "End of all speed and passing limits", "Turn right ahead", "Turn left ahead", "Ahead only", "Go straight or right", "Go straight or left", "Keep right", "Keep left", "Roundabout mandatory", "End of no passing", "End of no passing by vehicles over 3.5 metric tons"]
+
+# Define a list of traffic signs that require an alert (e.g., Stop)
+alert_signs = ["Stop"]
+
+# Function to process a frame and classify traffic signs
+def process_frame(frame):
+    # Preprocess the frame
+    frame = cv2.resize(frame, (224, 224))
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = frame / 255.0
+    frame = np.expand_dims(frame, axis=0)
+
+    # Perform traffic sign classification
+    predictions = model.predict(frame)
+    predicted_class = np.argmax(predictions)
+
+    # Get the label for the predicted class
+    label = class_names[predicted_class]
+
+    # Check if the detected sign requires an alert
+    if label in alert_signs:
+        # Implement your alert logic here (e.g., display a message, sound a buzzer)
+        print(f"Detected {label} - Alert!")
+
+    return label
+
+# Open a camera feed
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    detected_sign = process_frame(frame)
+
+    # Display the detected sign label on the frame
+    cv2.putText(frame, detected_sign, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.imshow("Traffic Sign Classifier", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
