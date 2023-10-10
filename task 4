@@ -1,0 +1,73 @@
+import re
+from collections import Counter
+
+class AutoCorrect:
+    def __init__(self, corpus):
+        self.words = re.findall(r'\w+', corpus.lower())
+        self.word_counts = Counter(self.words)
+    
+    def correct(self, word):
+        # Check if the word is in the dictionary or if it's a numeric word
+        if word in self.word_counts or word.isnumeric():
+            return word
+        
+        # Generate a list of potential corrections
+        suggestions = self.get_suggestions(word)
+        
+        if suggestions:
+            return max(suggestions, key=self.word_prob)
+        else:
+            return word
+    
+    def get_suggestions(self, word):
+        # Generate potential corrections based on edit distance
+        edit1 = self.edit_distance_1(word)
+        edit2 = self.edit_distance_2(edit1)
+        
+        # Filter suggestions to words in the dictionary
+        suggestions = [word for word in edit1.union(edit2) if word in self.word_counts]
+        
+        return suggestions
+    
+    def edit_distance_1(self, word):
+        letters = 'abcdefghijklmnopqrstuvwxyz'
+        splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+        deletes = [left + right[1:] for left, right in splits if right]
+        transposes = [left + right[1] + right[0] + right[2:] for left, right in splits if len(right) > 1]
+        replaces = [left + letter + right[1:] for left, right in splits if right for letter in letters]
+        inserts = [left + letter + right for left, right in splits for letter in letters]
+        
+        return set(deletes + transposes + replaces + inserts)
+    
+    def edit_distance_2(self, edits1):
+        edits2 = set()
+        for word in edits1:
+            for w in self.edit_distance_1(word):
+                edits2.update(self.edit_distance_1(w))
+        
+        return edits2
+    
+    def word_prob(self, word):
+        # Calculate the probability of a word based on its frequency in the corpus
+        total_words = sum(self.word_counts.values())
+        return self.word_counts[word] / total_words
+
+def main():
+    # Sample text
+    text = "Ths is a smple txt with misspeled wrds. Woud you like to correct it?"
+
+    # Create an AutoCorrect instance with a sample corpus
+    corpus = "This is a sample text with misspelled words. Would you like to correct it?"
+    auto_correct = AutoCorrect(corpus)
+
+    # Correct the text
+    corrected_text = [auto_correct.correct(word) for word in re.findall(r'\w+', text.lower())]
+    corrected_text = ' '.join(corrected_text)
+
+    print("Original Text:")
+    print(text)
+    print("\nCorrected Text:")
+    print(corrected_text)
+
+if __name__ == "__main__":
+    main()
